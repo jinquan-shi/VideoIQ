@@ -39,7 +39,16 @@ DATASET_CONFIG = {
         'image_tmpl': 'image_{:05d}.jpg',
         'filter_video': 0,
         'label_file': 'categories.txt'
-    }
+    },
+    'hmdb51': {
+        'num_classes': 51,
+        'train_list_name': 'train.txt',
+        'val_list_name': 'val.txt',
+        'test_list_name': 'test.txt',
+        'filename_seperator': " ",
+        'image_tmpl': '{:05d}.jpg',
+        'filter_video': 0
+    },
 }
 
 
