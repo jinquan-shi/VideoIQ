@@ -129,6 +129,8 @@ def train_iter_stream(model, optimz, data_load, loss_val, n_clips=2, n_clip_fram
     model.train()
     model.clean_activation_buffers()
     optimz.zero_grad()
+
+    scaler = torch.amp.GradScaler()
     
     for i, (data, target) in enumerate(data_load):
         data = data.cuda()
@@ -140,20 +142,22 @@ def train_iter_stream(model, optimz, data_load, loss_val, n_clips=2, n_clip_fram
 
         # backward pass for each clip
         for j in range(n_clips):
-            output = F.log_softmax(
-                model(
-                    data[:, :, (n_clip_frames) * (j) : (n_clip_frames) * (j + 1)]
-                ),
-                dim=1,
-            )
-            loss = F.nll_loss(output, target)
-            _, pred = torch.max(output, dim=1)
-            loss = F.nll_loss(output, target) / n_clips
+            with torch.amp.autocast('cuda'):
+                output = F.log_softmax(
+                    model(
+                        data[:, :, (n_clip_frames) * (j) : (n_clip_frames) * (j + 1)]
+                    ),
+                    dim=1,
+                )
+                loss = F.nll_loss(output, target)
+                _, pred = torch.max(output, dim=1)
+                loss = F.nll_loss(output, target) / n_clips
             
-            loss.backward()
+            scaler.scale(loss).backward()
             l_batch += loss.item() * n_clips
             
-        optimz.step()
+        scaler.step(optimz)
+        scaler.update()
         optimz.zero_grad()
 
         # clean the buffer of activations
